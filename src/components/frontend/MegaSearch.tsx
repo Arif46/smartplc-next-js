@@ -17,7 +17,7 @@ export default function MegaSearch({ className = "" }: MegaSearchProps) {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -45,7 +45,9 @@ export default function MegaSearch({ className = "" }: MegaSearchProps) {
         setLoading(false);
       }
     }, 300);
-    return () => clearTimeout(debounceRef.current);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [query]);
 
   const handleSubmit = (e: React.FormEvent) => {

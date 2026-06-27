@@ -21,7 +21,7 @@ import {
 import { useCartStore } from "@/store/useCartStore";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { useCompareStore } from "@/store/compareStore";
-import ProductMediaGallery from "@/components/frontend/product/ProductMediaGallery";
+import ProductMediaGallery from "@/components/frontend/Product/ProductMediaGallery";
 import StarRating from "@/components/frontend/ui/StarRating";
 import {
   resolveProductGallery,
@@ -54,12 +54,12 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product }) => {
   const rating = Number(product.rating ?? 0);
   const reviewCount = product.review_count ?? product.reviews?.length ?? 0;
 
-  const tabs: { id: DetailTab; label: string; show: boolean }[] = [
-    { id: "description", label: "Description", show: !!product.description },
-    { id: "specification", label: "Specifications", show: !!product.specification },
-    { id: "reviews", label: `Reviews (${reviewCount})`, show: reviewCount > 0 },
-    { id: "installation", label: "Installation", show: !!product.installation_guide },
-  ].filter((t) => t.show);
+  const tabs = ([
+    { id: "description" as const, label: "Description", show: !!product.description },
+    { id: "specification" as const, label: "Specifications", show: !!product.specification },
+    { id: "reviews" as const, label: `Reviews (${reviewCount})`, show: reviewCount > 0 },
+    { id: "installation" as const, label: "Installation", show: !!product.installation_guide },
+  ] as const).filter((t) => t.show);
 
   const handleAddToCart = () => {
     if (!inStock) return;

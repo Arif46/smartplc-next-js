@@ -57,7 +57,7 @@ interface ProductFormProps {
   categories?: Category[];
   brands?: Brand[];
   mode: "create" | "edit";
-  onSave: (data: FormData) => Promise<Product>;
+  onSave: (data: FormData) => Promise<void | Product>;
 }
 
 const slugify = (v: string) =>

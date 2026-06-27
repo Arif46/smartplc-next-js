@@ -16,14 +16,6 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
     loadProducts();
   }, [slug]);
 
-  // const handleAddToCart = (product: any) => {
-  //   console.log("Add to cart:", product);
-  // };
-
-  const handleAddToWishlist = (product: any) => {
-    console.log("Add to wishlist:", product);
-  };
-
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6 capitalize">{slug} Products</h1>
@@ -32,7 +24,6 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
           <ProductCard
             key={product.id}
             product={product}
-            onAddToWishlist={handleAddToWishlist}
           />
         ))}
       </div>

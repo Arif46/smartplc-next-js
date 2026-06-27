@@ -21,6 +21,7 @@ export interface Product {
   part_number?: string;
   barcode?: string;
   weight?: number | null;
+  dimensions?: string | null;
   warranty?: string;
   video_url?: string;
   gallery?: string[] | null;
@@ -29,8 +30,6 @@ export interface Product {
   rating?: number;
   review_count?: number;
   discount_percent?: number;
-  weight?: number | null;
-  dimensions?: string | null;
   reviews?: Array<{
     id: number;
     rating: number;

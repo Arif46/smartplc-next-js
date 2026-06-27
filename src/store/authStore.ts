@@ -9,9 +9,21 @@ interface User {
   role: "admin" | "customer" | string;
 }
 
+interface AuthUser {
+  id?: number;
+  role: string;
+  first_name?: string;
+  last_name?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  avatar?: string;
+  created_at?: string;
+}
+
 interface AuthState {
     isAuthenticated: boolean;
-    user: { role: string; first_name?: string; name?: string; email?: string } | null;
+    user: AuthUser | null;
     token: string | null;
     setUser: (user: any) => void; 
     login: (token: string, user: any) => void;

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/authStore";
 import { consumePostLoginRedirect } from "@/lib/checkoutConstants";
+import { Loader2 } from "lucide-react";
 
 function AuthCallbackContent() {
   const router = useRouter();
