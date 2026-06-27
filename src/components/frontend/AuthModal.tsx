@@ -1,40 +1,31 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import LoginForm from "@/components/frontend/auth/LoginForm";
 import RegisterForm from "@/components/frontend/auth/RegisterForm";
+import { useModalStore } from "@/store/modalStore";
 
-interface AuthModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+export default function AuthModal() {
+  const { authModal, closeAuthModal, openLoginModal, openRegisterModal } = useModalStore();
 
-export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const [showRegister, setShowRegister] = useState(false);
+  if (authModal === "closed") return null;
 
-  if (!isOpen) return null;
-
-  if (showRegister) {
+  if (authModal === "register") {
     return (
       <RegisterForm
         variant="modal"
-        onClose={() => setShowRegister(false)}
-        onLoginClick={() => setShowRegister(false)}
-        onSuccess={() => {
-          setShowRegister(false);
-          onClose();
-        }}
+        onClose={closeAuthModal}
+        onLoginClick={openLoginModal}
       />
     );
   }
 
   return (
     <LoginForm
-      mode="customer"
       variant="modal"
-      onClose={onClose}
-      onSuccess={onClose}
-      onRegisterClick={() => setShowRegister(true)}
+      onClose={closeAuthModal}
+      onSuccess={closeAuthModal}
+      onRegisterClick={openRegisterModal}
     />
   );
 }

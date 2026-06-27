@@ -1,26 +1,17 @@
 "use client";
 
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import LoginForm from "@/components/frontend/auth/LoginForm";
-import AuthNavTabs from "@/components/frontend/auth/AuthNavTabs";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useModalStore } from "@/store/modalStore";
 
-function CustomerLoginContent() {
-  const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || undefined;
+export default function LoginRedirectPage() {
+  const router = useRouter();
+  const openLoginModal = useModalStore((s) => s.openLoginModal);
 
-  return (
-    <>
-      <AuthNavTabs />
-      <LoginForm mode="customer" redirectTo={redirectTo} />
-    </>
-  );
-}
+  useEffect(() => {
+    openLoginModal();
+    router.replace("/");
+  }, [openLoginModal, router]);
 
-export default function LoginPage() {
-  return (
-    <Suspense fallback={null}>
-      <CustomerLoginContent />
-    </Suspense>
-  );
+  return null;
 }

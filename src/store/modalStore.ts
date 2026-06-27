@@ -1,19 +1,21 @@
 import { create } from "zustand";
 
+type AuthModalView = "closed" | "login" | "register";
+
 interface ModalState {
-  isAuthModalOpen: boolean;
-  openAuthModal: () => void;
+  authModal: AuthModalView;
+  openLoginModal: () => void;
+  openRegisterModal: () => void;
   closeAuthModal: () => void;
-  setIsAuthModalOpen: (value: boolean) => void;
+  openAuthModal: () => void;
 }
 
 export const useModalStore = create<ModalState>((set) => ({
-  isAuthModalOpen: false,
-
-  // ✅ explicit open/close methods
-  openAuthModal: () => set({ isAuthModalOpen: true }),
-  closeAuthModal: () => set({ isAuthModalOpen: false }),
-
-  // ✅ optional: direct setter for flexibility
-  setIsAuthModalOpen: (value) => set({ isAuthModalOpen: value }),
+  authModal: "closed",
+  openLoginModal: () => set({ authModal: "login" }),
+  openRegisterModal: () => set({ authModal: "register" }),
+  closeAuthModal: () => set({ authModal: "closed" }),
+  openAuthModal: () => set({ authModal: "login" }),
 }));
+
+export const useIsAuthModalOpen = () => useModalStore((s) => s.authModal !== "closed");

@@ -1,13 +1,17 @@
 "use client";
 
-import LoginForm from "@/components/frontend/auth/LoginForm";
-import AuthNavTabs from "@/components/frontend/auth/AuthNavTabs";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useModalStore } from "@/store/modalStore";
 
-export default function AdminLoginPage() {
-  return (
-    <>
-      <AuthNavTabs />
-      <LoginForm mode="admin" redirectTo="/admin" />
-    </>
-  );
+export default function AdminLoginRedirectPage() {
+  const router = useRouter();
+  const openLoginModal = useModalStore((s) => s.openLoginModal);
+
+  useEffect(() => {
+    openLoginModal();
+    router.replace("/");
+  }, [openLoginModal, router]);
+
+  return null;
 }

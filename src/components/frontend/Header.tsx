@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -37,7 +37,7 @@ export default function Header() {
   const router = useRouter();
   const { isAuthenticated, logout, user } = useAuthStore();
   const { items } = useCartStore();
-  const { openAuthModal, isAuthModalOpen, closeAuthModal } = useModalStore();
+  const { openLoginModal, openRegisterModal } = useModalStore();
   const wishlistCount = useWishlistStore((s) => s.count());
   const compareItems = useCompareStore((s) => s.items);
   const fitment = useFitmentStore();
@@ -45,12 +45,21 @@ export default function Header() {
   const mounted = useMounted();
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isLoginMenuOpen, setIsLoginMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isFitmentOpen, setIsFitmentOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const cartCount = items.reduce((sum, i) => sum + i.quantity, 0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("auth") === "login") openLoginModal();
+    if (params.get("auth") === "register") openRegisterModal();
+    if (params.get("auth")) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [openLoginModal, openRegisterModal]);
 
   const handleLogout = () => {
     logout();
@@ -173,28 +182,22 @@ export default function Header() {
                     )}
                   </>
                 ) : (
-                  <div className="relative">
+                  <div className="flex items-center gap-1 sm:gap-2">
                     <button
                       type="button"
-                      onClick={() => setIsLoginMenuOpen(!isLoginMenuOpen)}
-                      className="flex items-center gap-1.5 p-2 rounded-lg hover:bg-muted text-sm"
+                      onClick={openLoginModal}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg hover:bg-muted text-sm font-medium"
                     >
                       <User className="h-5 w-5" />
                       <span className="hidden sm:inline">Login</span>
                     </button>
-                    {isLoginMenuOpen && (
-                      <div className="absolute right-0 mt-1 w-52 rounded-xl border border-border bg-card shadow-xl z-30 overflow-hidden animate-fade-in-up">
-                        <Link href="/login" onClick={() => setIsLoginMenuOpen(false)} className="block px-4 py-2.5 text-sm hover:bg-muted">
-                          Customer Login
-                        </Link>
-                        <Link href="/login/admin" onClick={() => setIsLoginMenuOpen(false)} className="block px-4 py-2.5 text-sm hover:bg-muted">
-                          Admin Login
-                        </Link>
-                        <Link href="/register" onClick={() => setIsLoginMenuOpen(false)} className="block px-4 py-2.5 text-sm hover:bg-muted border-t border-border">
-                          Sign Up
-                        </Link>
-                      </div>
-                    )}
+                    <button
+                      type="button"
+                      onClick={openRegisterModal}
+                      className="hidden sm:inline-flex btn-primary text-sm py-2 px-4"
+                    >
+                      Sign Up
+                    </button>
                   </div>
                 )}
               </div>
@@ -245,12 +248,22 @@ export default function Header() {
                   {link.label}
                 </Link>
               ))}
+              {!isAuthenticated && mounted && (
+                <div className="flex gap-2 pt-2 border-t border-border mt-2">
+                  <button type="button" onClick={() => { openLoginModal(); setMobileMenuOpen(false); }} className="btn-secondary flex-1 text-sm">
+                    Login
+                  </button>
+                  <button type="button" onClick={() => { openRegisterModal(); setMobileMenuOpen(false); }} className="btn-primary flex-1 text-sm">
+                    Sign Up
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
       </header>
 
-      <AuthModal isOpen={isAuthModalOpen} onClose={closeAuthModal} />
+      <AuthModal />
       <CartSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
       <VehicleFitmentModal isOpen={isFitmentOpen} onClose={() => setIsFitmentOpen(false)} />
     </>

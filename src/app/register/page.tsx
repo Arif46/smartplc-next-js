@@ -1,13 +1,17 @@
 "use client";
 
-import RegisterForm from "@/components/frontend/auth/RegisterForm";
-import AuthNavTabs from "@/components/frontend/auth/AuthNavTabs";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useModalStore } from "@/store/modalStore";
 
-export default function RegisterPage() {
-  return (
-    <>
-      <AuthNavTabs />
-      <RegisterForm />
-    </>
-  );
+export default function RegisterRedirectPage() {
+  const router = useRouter();
+  const openRegisterModal = useModalStore((s) => s.openRegisterModal);
+
+  useEffect(() => {
+    openRegisterModal();
+    router.replace("/");
+  }, [openRegisterModal, router]);
+
+  return null;
 }

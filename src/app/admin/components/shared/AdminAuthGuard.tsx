@@ -13,7 +13,9 @@ export default function AdminAuthGuard({ children }: { children: React.ReactNode
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!isAuthenticated || user?.role !== "admin") router.push("/login/admin");
+    if (!isAuthenticated || user?.role !== "admin") {
+      router.push("/?auth=login");
+    }
   }, [hydrated, isAuthenticated, user, router]);
 
   if (!hydrated || !isAuthenticated || user?.role !== "admin") return null;

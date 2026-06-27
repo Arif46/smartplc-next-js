@@ -1,16 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, Eye, EyeOff, ChevronRight, Bike, Shield } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ChevronRight, Bike } from "lucide-react";
 import toast from "react-hot-toast";
 import AuthPageShell from "@/components/frontend/auth/AuthPageShell";
 import SocialAuthButtons from "@/components/frontend/auth/SocialAuthButtons";
 import { loginWithEmail } from "@/lib/authApi";
 import { useAuthStore } from "@/store/authStore";
 
-type LoginMode = "customer" | "admin";
+type LoginMode = "customer" | "admin" | "auto";
 
 interface LoginFormProps {
   mode?: LoginMode;
@@ -21,31 +20,8 @@ interface LoginFormProps {
   onRegisterClick?: () => void;
 }
 
-const copy = {
-  customer: {
-    title: "Customer Login",
-    subtitle: "Sign in to shop parts for your motorcycle",
-    submit: "Sign In",
-    signupText: "Don't have an account?",
-    signupHref: "/register",
-    signupLabel: "Create account",
-    backHref: "/",
-    backLabel: "Back to store",
-  },
-  admin: {
-    title: "Admin Login",
-    subtitle: "Secure access to Smart PLC admin dashboard",
-    submit: "Sign In to Admin",
-    signupText: "Customer?",
-    signupHref: "/login",
-    signupLabel: "Customer login",
-    backHref: "/",
-    backLabel: "Back to storefront",
-  },
-};
-
 export default function LoginForm({
-  mode = "customer",
+  mode = "auto",
   redirectTo,
   variant = "page",
   onClose,
@@ -57,8 +33,13 @@ export default function LoginForm({
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
-  const text = copy[mode];
-  const Icon = mode === "admin" ? Shield : Bike;
+
+  const isModal = variant === "modal";
+  const title = mode === "admin" ? "Admin Login" : "Welcome Back";
+  const subtitle =
+    mode === "admin"
+      ? "Secure access to Smart PLC admin dashboard"
+      : "Sign in to shop parts for your motorcycle";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,20 +52,21 @@ export default function LoginForm({
         toast.error("This account is not an admin user.");
         return;
       }
-      if (mode === "customer" && role === "admin") {
-        toast.error("Please use the admin login page.");
-        return;
-      }
 
       loginStore(res.token, res.user);
-      toast.success("Welcome back!");
+      toast.success(role === "admin" ? "Welcome, Admin!" : "Welcome back!");
       onSuccess?.();
       onClose?.();
 
-      if (redirectTo) router.push(redirectTo);
-      else if (role === "admin") router.push("/admin");
-      else if (role === "customer") router.push("/customer");
-      else router.push("/");
+      if (redirectTo) {
+        router.push(redirectTo);
+      } else if (role === "admin") {
+        router.push("/admin");
+      } else if (role === "customer") {
+        router.push("/customer");
+      } else {
+        router.push("/");
+      }
     } catch {
       toast.error("Incorrect email or password. Please check your credentials.");
     } finally {
@@ -94,17 +76,19 @@ export default function LoginForm({
 
   return (
     <AuthPageShell
-      icon={Icon}
-      title={text.title}
-      subtitle={text.subtitle}
-      backHref={variant === "page" ? text.backHref : undefined}
-      backLabel={text.backLabel}
+      icon={Bike}
+      title={title}
+      subtitle={subtitle}
+      backHref={!isModal && mode !== "admin" ? "/" : undefined}
+      backLabel="Back to store"
       onClose={onClose}
       variant={variant}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="login-email" className="text-sm font-medium mb-1.5 block">Email Address</label>
+          <label htmlFor="login-email" className="text-sm font-medium mb-1.5 block">
+            Email Address
+          </label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
@@ -119,7 +103,9 @@ export default function LoginForm({
           </div>
         </div>
         <div>
-          <label htmlFor="login-password" className="text-sm font-medium mb-1.5 block">Password</label>
+          <label htmlFor="login-password" className="text-sm font-medium mb-1.5 block">
+            Password
+          </label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
@@ -131,25 +117,29 @@ export default function LoginForm({
               placeholder="Enter your password"
               required
             />
-            <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
         </div>
         <button type="submit" disabled={loading} className="btn-primary w-full disabled:opacity-50">
-          {loading ? "Signing in..." : text.submit}
+          {loading ? "Signing in..." : "Sign In"}
           <ChevronRight className="h-4 w-4" />
         </button>
-        <p className="text-center text-sm text-muted-foreground">
-          {text.signupText}{" "}
-          {onRegisterClick ? (
-            <button type="button" onClick={onRegisterClick} className="text-primary font-semibold hover:underline">{text.signupLabel}</button>
-          ) : (
-            <Link href={text.signupHref} className="text-primary font-semibold hover:underline">{text.signupLabel}</Link>
-          )}
-        </p>
+        {!isModal && onRegisterClick ? (
+          <p className="text-center text-sm text-muted-foreground">
+            Don&apos;t have an account?{" "}
+            <button type="button" onClick={onRegisterClick} className="text-primary font-semibold hover:underline">
+              Create account
+            </button>
+          </p>
+        ) : null}
       </form>
-      {mode === "customer" ? <SocialAuthButtons /> : null}
+      <SocialAuthButtons />
     </AuthPageShell>
   );
 }

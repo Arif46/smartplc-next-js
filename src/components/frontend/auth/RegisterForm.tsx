@@ -44,10 +44,14 @@ export default function RegisterForm({ variant = "page", onClose, onSuccess, onL
     setLoading(true);
     try {
       await registerCustomer(formData);
-      toast.success("Account created! You can now sign in.");
+      toast.success("Account created! Please sign in.");
       onSuccess?.();
-      onClose?.();
-      router.push("/login");
+      if (variant === "modal" && onLoginClick) {
+        onLoginClick();
+      } else {
+        onClose?.();
+        router.push("/");
+      }
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Registration failed. Please try again.");
     } finally {
