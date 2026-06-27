@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ProductCard from "@/components/frontend/ProductCard";
 import ProductSkeleton from "@/components/frontend/ui/ProductSkeleton";
@@ -20,6 +20,8 @@ export type ShopSearchParams = {
   flag?: string;
   bike_model_id?: string;
 };
+
+const EMPTY_DEFAULT_PARAMS: Record<string, string> = {};
 
 function parseSearchParams(params: ShopSearchParams = {}) {
   const pageRaw = Number(params.page || 1);
@@ -46,22 +48,34 @@ export default function ShopListing({
   title,
   subtitle,
   defaultFlag,
-  defaultParams = {},
+  defaultParams = EMPTY_DEFAULT_PARAMS,
   initialSearchParams = {},
 }: ShopListingProps) {
   const router = useRouter();
   const parsed = useMemo(() => parseSearchParams(initialSearchParams), [initialSearchParams]);
+  const paramsKey = useMemo(() => JSON.stringify(initialSearchParams), [initialSearchParams]);
 
   const [products, setProducts] = useState<any[]>([]);
   const [meta, setMeta] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
+
   const [search, setSearch] = useState(parsed.search);
   const [category, setCategory] = useState(parsed.category);
   const [brand, setBrand] = useState(parsed.brand);
   const [sort, setSort] = useState(parsed.sort);
   const [page, setPage] = useState(parsed.page);
+
+  const appliedRef = useRef({
+    search: parsed.search,
+    category: parsed.category,
+    brand: parsed.brand,
+    sort: parsed.sort,
+    page: parsed.page,
+    flag: parsed.flag,
+    bikeModelId: parsed.bikeModelId,
+  });
 
   useEffect(() => {
     const next = parseSearchParams(initialSearchParams);
@@ -70,7 +84,16 @@ export default function ShopListing({
     setBrand(next.brand);
     setSort(next.sort);
     setPage(next.page);
-  }, [initialSearchParams]);
+    appliedRef.current = {
+      search: next.search,
+      category: next.category,
+      brand: next.brand,
+      sort: next.sort,
+      page: next.page,
+      flag: next.flag,
+      bikeModelId: next.bikeModelId,
+    };
+  }, [paramsKey]);
 
   useEffect(() => {
     Promise.all([fetchAllActiveCategories(), fetchAllBrands()])
@@ -82,15 +105,23 @@ export default function ShopListing({
   }, []);
 
   const loadProducts = useCallback(async () => {
-    setLoading(true);
+    const applied = appliedRef.current;
+
     try {
-      const params: Record<string, string | number> = { ...defaultParams, sort, page, per_page: 12 };
+      const params: Record<string, string | number> = {
+        ...defaultParams,
+        sort: applied.sort,
+        page: applied.page,
+        per_page: 12,
+      };
+
       if (defaultFlag) params.flag = defaultFlag;
-      else if (parsed.flag) params.flag = parsed.flag;
-      if (search.trim()) params.q = search.trim();
-      if (category) params.category = category;
-      if (brand) params.brand = brand;
-      if (parsed.bikeModelId) params.bike_model_id = parsed.bikeModelId;
+      else if (applied.flag) params.flag = applied.flag;
+      if (applied.search.trim()) params.q = applied.search.trim();
+      if (applied.category) params.category = applied.category;
+      if (applied.brand) params.brand = applied.brand;
+      if (applied.bikeModelId) params.bike_model_id = applied.bikeModelId;
+
       const data = await searchProducts(params);
       setProducts(data.data ?? []);
       setMeta(data);
@@ -100,11 +131,12 @@ export default function ShopListing({
     } finally {
       setLoading(false);
     }
-  }, [sort, page, defaultFlag, defaultParams, search, category, brand, parsed.flag, parsed.bikeModelId]);
+  }, [defaultParams, defaultFlag]);
 
   useEffect(() => {
+    setLoading(true);
     loadProducts();
-  }, [loadProducts]);
+  }, [paramsKey, defaultFlag, loadProducts]);
 
   const buildQuery = (overrides: Partial<ShopSearchParams> = {}) => {
     const params = new URLSearchParams();
@@ -129,6 +161,14 @@ export default function ShopListing({
   };
 
   const applyFilters = () => {
+    appliedRef.current = {
+      ...appliedRef.current,
+      search,
+      category,
+      brand,
+      sort,
+      page: 1,
+    };
     setPage(1);
     const query = buildQuery({ page: undefined });
     router.push(query ? `/shop?${query}` : "/shop");
@@ -140,6 +180,15 @@ export default function ShopListing({
     setBrand("");
     setSort("newest");
     setPage(1);
+    appliedRef.current = {
+      search: "",
+      category: "",
+      brand: "",
+      sort: "newest",
+      page: 1,
+      flag: parsed.flag,
+      bikeModelId: parsed.bikeModelId,
+    };
     const params = new URLSearchParams();
     if (defaultFlag) params.set("flag", defaultFlag);
     else if (parsed.flag) params.set("flag", parsed.flag);
@@ -147,9 +196,17 @@ export default function ShopListing({
     router.push(params.toString() ? `/shop?${params.toString()}` : "/shop");
   };
 
+  const goToPage = (next: number) => {
+    appliedRef.current = { ...appliedRef.current, page: next };
+    setPage(next);
+    router.push(`/shop?${buildQuery({ page: next > 1 ? String(next) : undefined })}`);
+  };
+
+  const showSkeleton = loading && products.length === 0;
+
   return (
     <div>
-      <div className="mb-8">
+      <div className="mb-8 min-h-[72px]">
         <h1 className="section-title">{title}</h1>
         {subtitle && <p className="section-subtitle">{subtitle}</p>}
         {meta?.total !== undefined && (
@@ -159,7 +216,7 @@ export default function ShopListing({
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <aside className="lg:col-span-1 space-y-4">
-          <div className="rounded-xl border border-border bg-card p-4 space-y-4 sticky top-24">
+          <div className="rounded-xl border border-border bg-card p-4 space-y-4 lg:sticky lg:top-24">
             <div className="flex items-center gap-2 font-semibold text-foreground">
               <SlidersHorizontal className="h-4 w-4" />
               Filter & Search
@@ -168,26 +225,52 @@ export default function ShopListing({
               <label htmlFor="shop-search" className="text-xs font-medium text-muted-foreground mb-1 block">Search</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input id="shop-search" value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === "Enter" && applyFilters()} placeholder="Search parts..." className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                <input
+                  id="shop-search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && applyFilters()}
+                  placeholder="Search parts..."
+                  className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
               </div>
             </div>
             <div>
               <label htmlFor="shop-category" className="text-xs font-medium text-muted-foreground mb-1 block">Category</label>
-              <select id="shop-category" value={category} onChange={(e) => setCategory(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring">
+              <select
+                id="shop-category"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+              >
                 <option value="">All Categories</option>
-                {categories.map((c) => <option key={c.id} value={c.slug}>{c.name}</option>)}
+                {categories.map((c) => (
+                  <option key={c.id} value={c.slug}>{c.name}</option>
+                ))}
               </select>
             </div>
             <div>
               <label htmlFor="shop-brand" className="text-xs font-medium text-muted-foreground mb-1 block">Brand</label>
-              <select id="shop-brand" value={brand} onChange={(e) => setBrand(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring">
+              <select
+                id="shop-brand"
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+              >
                 <option value="">All Brands</option>
-                {brands.map((b) => <option key={b.id} value={String(b.id)}>{b.name}</option>)}
+                {brands.map((b) => (
+                  <option key={b.id} value={String(b.id)}>{b.name}</option>
+                ))}
               </select>
             </div>
             <div>
               <label htmlFor="shop-sort" className="text-xs font-medium text-muted-foreground mb-1 block">Sort by</label>
-              <select id="shop-sort" value={sort} onChange={(e) => setSort(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring">
+              <select
+                id="shop-sort"
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+              >
                 <option value="newest">Newest</option>
                 <option value="price_asc">Price: Low to High</option>
                 <option value="price_desc">Price: High to Low</option>
@@ -197,24 +280,44 @@ export default function ShopListing({
             </div>
             <div className="flex gap-2 pt-2">
               <button type="button" onClick={applyFilters} className="btn-primary flex-1 text-sm py-2">Apply</button>
-              <button type="button" onClick={clearFilters} className="btn-secondary px-3" title="Clear filters"><X className="h-4 w-4" /></button>
+              <button type="button" onClick={clearFilters} className="btn-secondary px-3" title="Clear filters">
+                <X className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </aside>
 
-        <div className="lg:col-span-3">
-          {loading ? <ProductSkeleton /> : products.length === 0 ? <EmptyState /> : (
+        <div className="lg:col-span-3 min-h-[480px]">
+          {showSkeleton ? (
+            <ProductSkeleton count={12} columns="shop" />
+          ) : products.length === 0 ? (
+            <EmptyState />
+          ) : (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
-                {products.map((p) => <ProductCard key={p.id} product={p} />)}
+              <div className={`grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 transition-opacity ${loading ? "opacity-70" : "opacity-100"}`}>
+                {products.map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
               </div>
               {meta?.last_page > 1 && (
                 <div className="flex items-center justify-center gap-4 mt-10">
-                  <button type="button" onClick={() => { const next = Math.max(1, page - 1); setPage(next); router.push(`/shop?${buildQuery({ page: next > 1 ? String(next) : undefined })}`); }} disabled={page <= 1} className="btn-secondary disabled:opacity-40">
+                  <button
+                    type="button"
+                    onClick={() => goToPage(Math.max(1, page - 1))}
+                    disabled={page <= 1 || loading}
+                    className="btn-secondary disabled:opacity-40"
+                  >
                     <ChevronLeft className="h-4 w-4" /> Previous
                   </button>
-                  <span className="text-sm text-muted-foreground">Page {page} of {meta.last_page}</span>
-                  <button type="button" onClick={() => { const next = Math.min(meta.last_page, page + 1); setPage(next); router.push(`/shop?${buildQuery({ page: String(next) })}`); }} disabled={page >= meta.last_page} className="btn-secondary disabled:opacity-40">
+                  <span className="text-sm text-muted-foreground">
+                    Page {page} of {meta.last_page}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => goToPage(Math.min(meta.last_page, page + 1))}
+                    disabled={page >= meta.last_page || loading}
+                    className="btn-secondary disabled:opacity-40"
+                  >
                     Next <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>

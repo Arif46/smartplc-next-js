@@ -1,6 +1,4 @@
-import { Suspense } from "react";
 import ShopListing from "@/components/frontend/shop/ShopListing";
-import ProductSkeleton from "@/components/frontend/ui/ProductSkeleton";
 
 type ShopSearchParams = {
   q?: string;
@@ -32,12 +30,10 @@ export default async function ShopPage({
   const resolved = normalizeSearchParams(await searchParams);
 
   return (
-    <Suspense fallback={<ProductSkeleton />}>
-      <ShopListing
-        title="Shop All Parts"
-        subtitle="Browse our complete motorcycle parts catalog"
-        initialSearchParams={resolved}
-      />
-    </Suspense>
+    <ShopListing
+      title="Shop All Parts"
+      subtitle="Browse our complete motorcycle parts catalog"
+      initialSearchParams={resolved}
+    />
   );
 }
