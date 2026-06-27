@@ -11,7 +11,7 @@ interface User {
 
 interface AuthState {
     isAuthenticated: boolean;
-    user: { role: string } | null;
+    user: { role: string; first_name?: string; name?: string; email?: string } | null;
     token: string | null;
     setUser: (user: any) => void; 
     login: (token: string, user: any) => void;

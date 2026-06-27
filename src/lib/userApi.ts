@@ -42,10 +42,11 @@ export interface PaginatedResponse<T> {
 export const fetchusers = async (
   q = "",
   page = 1,
-  itemsPerPage = 10
+  itemsPerPage = 10,
+  role = ""
 ): Promise<PaginatedResponse<User>> => {
   const res = await api.get("/api/users", {
-    params: { q, page, paginate: true, itemsPerPage },
+    params: { q, page, paginate: true, itemsPerPage, role: role || undefined },
   });
 
   const payload = res.data.data; // <-- this is the Laravel paginator result
@@ -75,7 +76,10 @@ export interface CreatePayload {
   first_name: string;
   last_name: string;
   phone: number;
-  email: number;
+  email: string;
+  role?: string;
+  password?: string;
+  password_confirmation?: string;
 }
 
 export const createUser = async (payload: CreatePayload): Promise<User> => {

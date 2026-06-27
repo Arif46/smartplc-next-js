@@ -244,7 +244,6 @@ export default function CategoryShopPage({ slug }: Props) {
                 <ProductCard
                   key={p.id}
                   product={p}
-                  onAddToWishlist={() => console.log("wishlist", p)}
                 />
               ))}
             </div>

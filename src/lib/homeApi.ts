@@ -1,6 +1,20 @@
 
 import api from "@/lib/api";
 
+const getCache = new Map<string, { data: unknown; expires: number }>();
+const CACHE_TTL_MS = 60_000;
+
+async function cachedGet<T>(url: string): Promise<T> {
+  const hit = getCache.get(url);
+  if (hit && hit.expires > Date.now()) {
+    return hit.data as T;
+  }
+  const res = await api.get(url);
+  const data = res.data.data as T;
+  getCache.set(url, { data, expires: Date.now() + CACHE_TTL_MS });
+  return data;
+}
+
 /**
  * Laravel paginator meta shape (common fields).
  * Adjust if your backend uses different keys.
@@ -24,6 +38,7 @@ export interface Product {
 export interface Brand {
   id: number;
   name: string;
+  slug?: string;
 }
 
 export interface Category {
@@ -50,8 +65,7 @@ export interface PaginatedResponse<T> {
 }
 
 export const fetchAllActiveCategories = async () => {
-    const res = await api.get("/api/all-categories");
-    return res.data.data;
+    return cachedGet<Category[]>("/api/all-categories");
   };
 
 export const fetchProductsByCategorySlug = async (slug: string) => {
@@ -70,8 +84,7 @@ export const fetchProductBySlug = async (slug: string) => {
 // };
   
 export const fetchAvailableCategories = async (): Promise<Category[]> => {
-    const res = await api.get("/api/product-wise-categories");
-   return res.data.data as Category[];
+   return cachedGet<Category[]>("/api/product-wise-categories");
 };
 
 export const fetchFilterCategoryProducts = async (

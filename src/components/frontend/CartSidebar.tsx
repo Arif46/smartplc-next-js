@@ -4,6 +4,7 @@ import { X, Plus, Minus, ShoppingBag, Trash2 } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from "@/store/authStore";
 import { useModalStore } from "@/store/modalStore";
+import { getProductImageUrl } from "@/lib/productUtils";
 
 interface CartItem {
   id: number;
@@ -86,11 +87,7 @@ const CartSidebar: React.FC<CartSidebarProps> = ({
                 {items.map((item) => (
                   <div key={`${item.id}`} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
                     <img
-                      src={
-                        item.image.startsWith("http")
-                          ? item.image
-                          : `${process.env.NEXT_PUBLIC_API_BASE_URL}/storage/products/${item.image}`
-                      }
+                      src={getProductImageUrl(item.image)}
                       width={64}
                       height={64}
                       alt={item.name}
@@ -121,7 +118,7 @@ const CartSidebar: React.FC<CartSidebarProps> = ({
                           </button>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <span className="font-semibold text-gray-900">${(item.price * item.quantity).toFixed(2)}</span>
+                          <span className="font-semibold text-gray-900">৳{(item.price * item.quantity).toFixed(2)}</span>
                           <button
                             onClick={() => removeItem(item.id)}
                             className="p-1 text-red-500 hover:bg-red-50 rounded"
@@ -143,17 +140,17 @@ const CartSidebar: React.FC<CartSidebarProps> = ({
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
-                  <span className="text-gray-900">${subtotal.toFixed(2)}</span>
+                  <span className="text-gray-900">৳{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Shipping</span>
                   <span className="text-gray-900">
-                    {shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}
+                    {shipping === 0 ? 'Free' : `৳${shipping.toFixed(2)}`}
                   </span>
                 </div>
                 <div className="flex justify-between text-lg font-semibold border-t pt-2">
                   <span className="text-gray-900">Total</span>
-                  <span className="text-gray-900">${total.toFixed(2)}</span>
+                  <span className="text-gray-900">৳{total.toFixed(2)}</span>
                 </div>
               </div>
               

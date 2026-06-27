@@ -1,63 +1,28 @@
-// src/app/layout.tsx
 import type { Metadata } from 'next';
-// import { GeistSans, GeistMono } from 'geist/font';
 import FrontendLayout from '@/components/frontend/FrontendLayout';
+import ThemeProvider from '@/components/frontend/ThemeProvider';
 import './globals.css';
 import ToastProvider from "./common/ToastProvider";
-import "react-quill-new/dist/quill.snow.css";
-
-const OG_URL = 'http://smart-plc-ec-system.test/';
 
 export const metadata: Metadata = {
-  title: 'SmartPLCBD',
-  description: 'Your one-stop solution for home electrical Service',
-  keywords: ['Delta', 'Omron', 'Mitsubishi', 'Keyence'],
-  authors: [{ name: 'Smart PLC BD Team', url: OG_URL }],
-  creator: 'Smart PC BD',
-  publisher: 'Smart PLC BD Technologies Ltd.',
-  robots: {
-    index: true,
-    follow: true,
-    nocache: false,
-    googleBot: {
-      index: true,
-      follow: true,
-      noimageindex: false,
-    },
+  title: {
+    default: 'Smart PLC Eco System | Premium Motorcycle Parts',
+    template: '%s | Smart PLC Eco System',
   },
+  description: 'Bangladesh\'s premium destination for motorcycle parts. Engine, brakes, exhaust, electrical & more with vehicle fitment matching.',
+  keywords: ['motorcycle parts', 'bike parts', 'Yamaha parts', 'Honda parts', 'Smart PLC', 'Bangladesh'],
 };
 
-// export default function RootLayout({
-//   children,
-// }: {
-//   children: React.ReactNode;
-// }) {
-//   return (
-//     <html lang="en">
-//       <body className="bg-gray-100 text-gray-900">
-//         <FrontendLayout>
-//           {children}
-//         </FrontendLayout>
-//         <ToastProvider />
-//       </body>
-//     </html>
-//   );
-// }
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        <meta
-          name="google-site-verification"
-          content="gCKrWFeim0Zr1rHCVKSXNXjAbt2rdUNorZ_y3ycv9W0"
-        />
-      </head>
-
-      <body className="bg-gray-100 text-gray-900">
-        <FrontendLayout>
-          {children}
-        </FrontendLayout>
-        <ToastProvider />
+    <html lang="en" suppressHydrationWarning>
+      <body className="bg-background text-foreground antialiased">
+        <ThemeProvider>
+          <FrontendLayout>
+            {children}
+          </FrontendLayout>
+          <ToastProvider />
+        </ThemeProvider>
       </body>
     </html>
   );

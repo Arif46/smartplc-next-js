@@ -1,18 +1,24 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
+import './admin.css';
 
 export const metadata: Metadata = {
-  title: 'Admin Dashboard - SmartPLC',
-  description: 'Administrative dashboard for SmartPLC system',
+  title: 'Admin Dashboard - Smart PLC Eco System',
+  description: 'Administrative dashboard for Smart PLC Eco System',
 };
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function AdminRouteLoading() {
   return (
-      <div className="bg-gray-100">
-        {children}
-      </div>
+    <div className="admin-shell min-h-screen flex items-center justify-center text-slate-400" style={{ background: 'var(--admin-bg)' }}>
+      Loading...
+    </div>
+  );
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="admin-shell min-h-screen" style={{ background: 'var(--admin-bg)' }}>
+      <Suspense fallback={<AdminRouteLoading />}>{children}</Suspense>
+    </div>
   );
 }

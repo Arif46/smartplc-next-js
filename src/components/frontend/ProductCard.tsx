@@ -1,140 +1,188 @@
-import React, { useState } from 'react';
-import { Heart, ShoppingCart } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useCartStore } from '@/store/useCartStore';
+"use client";
 
-interface Product {
+import React, { useState } from "react";
+import { Heart, ShoppingCart, GitCompare, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useCartStore } from "@/store/useCartStore";
+import { useWishlistStore } from "@/store/wishlistStore";
+import { useCompareStore } from "@/store/compareStore";
+import StarRating from "@/components/frontend/ui/StarRating";
+import {
+  getProductImageUrl,
+  resolveProductImage,
+  formatPrice,
+  getEffectivePrice,
+  getDiscountPercent,
+} from "@/lib/productUtils";
+import toast from "react-hot-toast";
+
+export interface ProductCardData {
   id: number;
   slug: string;
   name: string;
   purchase_price: number;
-  description: string;
-  specification: string;
-  originalPrice?: number;
-  image: string;
-  category: { id: number; name: string };
-  brand?: { id: number; name: string };
+  sale_price?: number | null;
+  discount_percent?: number;
+  description?: string;
+  image?: string | null;
+  image_url?: string | null;
   stock: number;
+  rating?: number;
+  review_count?: number;
+  brand?: { id: number; name: string };
+  is_featured?: boolean;
+  is_new_arrival?: boolean;
+  is_flash_sale?: boolean;
+  is_on_sale?: boolean;
 }
 
 interface ProductCardProps {
-  product: Product;
-  // onAddToCart: (product: Product) => void;
-  onAddToWishlist: (product: Product) => void;
+  product: ProductCardData;
+  showBadges?: boolean;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToWishlist }) => {
+export default function ProductCard({ product, showBadges = true }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const router = useRouter();
-  const addItem = useCartStore(state => state.addToCart);
+  const addToCart = useCartStore((s) => s.addToCart);
+  const { toggle: toggleWishlist, has: isWishlisted } = useWishlistStore();
+  const { add: addCompare, has: isCompared } = useCompareStore();
 
-  // 🩵 Toggle wishlist
-  const handleWishlistClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent navigation
-    setIsWishlisted(!isWishlisted);
-    onAddToWishlist(product);
+  const discount = getDiscountPercent(product);
+  const effectivePrice = getEffectivePrice(product);
+  const wishlisted = isWishlisted(product.id);
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!product.stock) return;
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: effectivePrice,
+      image: product.image ?? "",
+      stock: product.stock,
+      quantity: 1,
+    });
+    toast.success("Added to cart");
   };
 
-  // 🩵 Add to cart (don’t trigger navigation)
-  // const handleAddToCart = (e: React.MouseEvent) => {
-  //   e.stopPropagation(); // Prevent redirect
-  //   onAddToCart(product);
-  // };
+  const handleWishlist = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleWishlist({
+      id: product.id,
+      slug: product.slug,
+      name: product.name,
+      purchase_price: product.purchase_price,
+      sale_price: product.sale_price,
+      image: product.image ?? "",
+      stock: product.stock,
+    });
+  };
 
- const handleAddToCart = (e: React.MouseEvent) => {
-  e.stopPropagation();
-  addItem({
-    id: product.id,
-    //slug: product.slug,
-    name: product.name,
-    price: product.purchase_price,
-    image: product.image,
-    stock: product.stock ? product.stock : 0,
-    quantity: 1,
-  });
-};
-
-  // 🩵 Navigate to product details page
-  const handleProductClick = () => {
-    if (!product.slug) return;
-    router.push(`/product/${product.slug}`); // make sure your route is /products/[slug]
+  const handleCompare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const ok = addCompare({
+      id: product.id,
+      slug: product.slug,
+      name: product.name,
+      purchase_price: product.purchase_price,
+      image: product.image ?? "",
+      brand: product.brand,
+    });
+    toast[ok ? "success" : "error"](ok ? "Added to compare" : "Compare list full (max 4)");
   };
 
   return (
-    <div
-      onClick={handleProductClick}
-      className="bg-white rounded-lg shadow-md overflow-hidden transition-all duration-300 transform hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+    <article
+      onClick={() => router.push(`/product/${product.slug}`)}
+      className="group relative rounded-xl border border-border bg-card overflow-hidden card-hover cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* ==== IMAGE SECTION ==== */}
-      <div className="relative">
+      <div className="relative aspect-square overflow-hidden bg-muted">
         <img
-          src={
-            product.image.startsWith("http")
-              ? product.image
-              : `${process.env.NEXT_PUBLIC_API_BASE_URL}/storage/products/${product.image}`
-          }
-          width={300}
-          height={300}
+          src={resolveProductImage(product)}
           alt={product.name}
-          className="w-full h-48 object-cover"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
 
-        {/* Out of stock overlay */}
-        {!product.stock && (
-          <div className="absolute inset-0 bg-black/35 flex items-center justify-center">
-            <span className="text-white font-semibold">Out of Stock</span>
+        {showBadges && (
+          <div className="absolute top-2 left-2 flex flex-col gap-1">
+            {discount > 0 && <span className="badge-sale">-{discount}%</span>}
+            {product.is_new_arrival && <span className="badge-new">NEW</span>}
+            {product.is_flash_sale && <span className="badge-featured">FLASH</span>}
           </div>
         )}
 
-        {/* Hover Add to Cart */}
-        {isHovered && product.stock && (
-          <div className="absolute inset-0 bg-opacity-40 flex items-center justify-center transition-opacity duration-300">
+        {!product.stock && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <span className="text-white font-semibold text-sm">Out of Stock</span>
+          </div>
+        )}
+
+        <div
+          className={`absolute top-2 right-2 flex flex-col gap-1.5 transition-opacity ${
+            isHovered ? "opacity-100" : "opacity-0 md:opacity-0"
+          }`}
+        >
+          <button
+            onClick={handleWishlist}
+            className={`p-2 rounded-full shadow-md transition-colors ${
+              wishlisted ? "bg-danger text-white" : "bg-card text-foreground hover:bg-muted"
+            }`}
+            aria-label="Wishlist"
+          >
+            <Heart className={`h-4 w-4 ${wishlisted ? "fill-current" : ""}`} />
+          </button>
+          <button
+            onClick={handleCompare}
+            className={`p-2 rounded-full shadow-md transition-colors ${
+              isCompared(product.id) ? "bg-accent text-white" : "bg-card text-foreground hover:bg-muted"
+            }`}
+            aria-label="Compare"
+          >
+            <GitCompare className="h-4 w-4" />
+          </button>
+        </div>
+
+        {isHovered && product.stock > 0 && (
+          <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
             <button
               onClick={handleAddToCart}
-              className="bg-white text-gray-900 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 flex items-center space-x-2"
+              className="w-full btn-primary text-sm py-2"
             >
               <ShoppingCart className="h-4 w-4" />
-              <span>Add to Cart</span>
+              Add to Cart
             </button>
           </div>
         )}
-
-        {/* Wishlist button */}
-        <button
-          onClick={handleWishlistClick}
-          className={`absolute top-2 right-2 p-2 rounded-full transition-all duration-300 ${
-            isWishlisted
-              ? 'bg-red-500 text-white'
-              : 'bg-white bg-opacity-80 hover:bg-opacity-100 text-gray-600'
-          }`}
-        >
-          <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
-        </button>
       </div>
 
-      {/* ==== PRODUCT INFO ==== */}
-      <div className="p-4 text-center">
-        <h3 className="font-bold text-gray-900 mb-1 text-lg line-clamp-1 hover:text-blue-600 transition-colors">
+      <div className="p-4">
+        {product.brand && (
+          <p className="text-xs font-medium text-accent uppercase tracking-wide mb-1">
+            {product.brand.name}
+          </p>
+        )}
+        <h3 className="font-semibold text-foreground line-clamp-2 min-h-[2.5rem] group-hover:text-primary transition-colors">
           {product.name}
         </h3>
 
-        <p className="text-sm text-gray-500 mb-1 line-clamp-2">
-          {product.description}
-        </p>
+        {(product.rating ?? 0) > 0 && (
+          <div className="mt-2">
+            <StarRating rating={product.rating ?? 0} count={product.review_count} />
+          </div>
+        )}
 
-        <p className="text-sm font-bold mb-2">
-          {product.brand?.name || "No Brand"}
-        </p>
-
-        <p className="text-xl font-bold text-gray-900">
-          Tk {product.purchase_price}
-        </p>
+        <div className="mt-3 flex items-end gap-2">
+          <span className="text-lg font-bold text-foreground">{formatPrice(effectivePrice)}</span>
+          {product.sale_price && product.sale_price < product.purchase_price && (
+            <span className="text-sm text-muted-foreground line-through">
+              {formatPrice(product.purchase_price)}
+            </span>
+          )}
+        </div>
       </div>
-    </div>
+    </article>
   );
-};
-
-export default ProductCard;
+}

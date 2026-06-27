@@ -1,25 +1,15 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// protected routes
-const adminRoutes = ["/admin"];
-const customerRoutes = ["/customer"];
-
+// Auth is handled client-side via Zustand + page-level guards.
+// Middleware only adds no-cache headers for protected routes.
 export function middleware(req: NextRequest) {
-  const url = req.nextUrl.clone();
   const path = req.nextUrl.pathname;
 
-  const token = req.cookies.get("auth-token")?.value; // Sanctum or token
-
-  if (!token) {
-    if (adminRoutes.some((r) => path.startsWith(r))) {
-      url.pathname = "/login";
-      return NextResponse.redirect(url);
-    }
-    if (customerRoutes.some((r) => path.startsWith(r))) {
-      url.pathname = "/login";
-      return NextResponse.redirect(url);
-    }
+  if (path.startsWith("/admin") || path.startsWith("/customer")) {
+    const response = NextResponse.next();
+    response.headers.set("Cache-Control", "no-store");
+    return response;
   }
 
   return NextResponse.next();

@@ -1,183 +1,103 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { AdminCrudLabel } from "../shared/AdminCrudLayout";
 
-//export type BrandStatus = "active" | "inactive";
-export type BrandStatus = 1 | 2; // 1 = active, 2 = inactive
+export type BrandStatus = 1 | 2;
 
 export interface Brand {
   id: number;
   name: string;
   slug: string;
   status: BrandStatus;
-}
-
-interface SavePayload {
-  name: string;
-  slug: string;
+  description?: string | null;
+  is_featured?: boolean;
+  logo?: string | null;
+  logo_url?: string | null;
 }
 
 interface BrandFormProps {
   initial?: Partial<Brand> | null;
-  onCancel: () => void;
-  onSave: (payload: SavePayload) => Promise<void> | void;
+  formId?: string;
+  onSave: (payload: FormData) => Promise<void> | void;
 }
 
 const slugify = (value: string) =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\-]+/g, "-")
-    .replace(/\-+/g, "-")
-    .replace(/^\-|\-$/g, "");
+  value.trim().toLowerCase().replace(/[^a-z0-9\-]+/g, "-").replace(/\-+/g, "-").replace(/^\-|\-$/g, "");
 
-const BrandForm: React.FC<BrandFormProps> = ({ initial = null, onCancel, onSave }) => {
+export default function BrandForm({ initial = null, formId = "brand-form", onSave }: BrandFormProps) {
   const [name, setName] = useState(initial?.name ?? "");
   const [slug, setSlug] = useState(initial?.slug ?? "");
-  // const [status, setStatus] = useState<BrandStatus>((initial?.status as BrandStatus) ?? "active");
-  const [customSlugEdited, setCustomSlugEdited] = useState<boolean>(!!initial?.slug);
-  const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<{name?: string, slug?: string}>({});
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [isFeatured, setIsFeatured] = useState(initial?.is_featured ?? false);
+  const [logo, setLogo] = useState<File | null>(null);
+  const [customSlugEdited, setCustomSlugEdited] = useState(!!initial?.slug);
 
   useEffect(() => {
-    if (!customSlugEdited) {
-      setSlug(slugify(name || ""));
-    }
-  }, [name, customSlugEdited]);
+    setName(initial?.name ?? "");
+    setSlug(initial?.slug ?? "");
+    setDescription(initial?.description ?? "");
+    setIsFeatured(initial?.is_featured ?? false);
+    setLogo(null);
+    setCustomSlugEdited(!!initial?.slug);
+  }, [initial?.id]);
 
-  const validateForm = () => {
-    const newErrors: {name?: string, slug?: string} = {};
-    
-    if (!name.trim()) {
-      newErrors.name = "Name is required";
-    }
-    
-    if (!slug.trim()) {
-      newErrors.slug = "Slug is required";
-    } else if (!/^[a-z0-9\-]+$/.test(slug)) {
-      newErrors.slug = "Slug can only contain lowercase letters, numbers, and hyphens";
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  useEffect(() => {
+    if (!customSlugEdited) setSlug(slugify(name || ""));
+  }, [name, customSlugEdited]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
+    if (!name.trim()) return toast.error("Brand name is required");
 
-    const payload: SavePayload = {
-      name: name.trim(),
-      slug: slug.trim() || slugify(name)
-    };
+    const fd = new FormData();
+    fd.append("name", name.trim());
+    fd.append("slug", slug.trim() || slugify(name));
+    if (description) fd.append("description", description);
+    fd.append("is_featured", isFeatured ? "1" : "0");
+    if (logo) fd.append("logo", logo);
 
     try {
-      setSaving(true);
-      await onSave(payload);
-      
-    } catch (err) {
-      const message = (err as any)?.response?.data?.message ?? (err as Error).message ?? "Save failed";
-      toast.error(message);
-    } finally {
-      setSaving(false);
+      await onSave(fd);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Save failed");
     }
   };
+
   return (
-    <div className="relative bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
-      {/* Loader Overlay */}
-      {saving && (
-        <div className="absolute inset-0 bg-gray-200/50 flex items-center justify-center z-10 rounded-lg">
-          <svg
-            className="animate-spin h-8 w-8 text-blue-600"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            ></circle>
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 
-                0 5.373 0 12h4zm2 5.291A7.962 7.962 
-                0 014 12H0c0 3.042 1.135 5.824 3 
-                7.938l3-2.647z"
-            ></path>
-          </svg>
-        </div>
-      )}
-
-  
-      <form onSubmit={handleSubmit} className="space-y-5 relative z-0">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              if (errors.name) setErrors({ ...errors, name: undefined });
-            }}
-            disabled={saving}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.name ? "border-red-500" : "border-gray-300"
-            }`}
-            placeholder="Enter Brand name"
+    <form id={formId} onSubmit={handleSubmit} className="space-y-3">
+      <div>
+        <AdminCrudLabel required>Brand Name</AdminCrudLabel>
+        <input className="crud-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter brand name" />
+      </div>
+      <div>
+        <AdminCrudLabel required>Slug</AdminCrudLabel>
+        <input className="crud-input" value={slug} onChange={(e) => { setSlug(e.target.value); setCustomSlugEdited(true); }} />
+      </div>
+      <div>
+        <AdminCrudLabel>Description</AdminCrudLabel>
+        <textarea className="crud-input" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+      </div>
+      <div>
+        <AdminCrudLabel>Brand Logo</AdminCrudLabel>
+        <input type="file" accept="image/*" className="crud-input py-2" onChange={(e) => setLogo(e.target.files?.[0] ?? null)} />
+        {(initial?.logo_url || logo) && (
+          <img
+            src={logo ? URL.createObjectURL(logo) : initial?.logo_url!}
+            alt=""
+            className="mt-2 h-16 rounded-md border object-contain bg-slate-50 p-1"
           />
-          {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
-        </div>
-  
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Slug <span className="text-red-500">*</span>
-          </label>
-          <input
-            value={slug}
-            onChange={(e) => {
-              setSlug(e.target.value);
-              setCustomSlugEdited(true);
-              if (errors.slug) setErrors({ ...errors, slug: undefined });
-            }}
-            disabled={saving}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.slug ? "border-red-500" : "border-gray-300"
-            }`}
-            placeholder="Brand-slug"
-          />
-          {errors.slug && <p className="mt-1 text-sm text-red-600">{errors.slug}</p>}
-        </div>
-  
-        <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={saving}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70"
-          >
-            Save Brand
-          </button>
-        </div>
-      </form>
-    </div>
+        )}
+      </div>
+      <label className="flex items-center gap-2 text-sm text-slate-600">
+        <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} />
+        Featured on homepage
+      </label>
+    </form>
   );
-  
-};
+}
 
-export default BrandForm;
+export function emptyBrandForm() {
+  return { id: undefined, name: "", slug: "", description: "", is_featured: false, logo_url: null };
+}

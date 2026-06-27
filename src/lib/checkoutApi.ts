@@ -1,36 +1,7 @@
-import api from "@/lib/api"; // 👈 same as your category API import
-
-export interface CheckoutItem {
-  product_id: number;
-  quantity: number;
-  price: number;
-}
-
-export interface ShippingInfo {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-}
-
-export interface PaymentInfo {
-  method: "cod" | "bkash" | "nagad" | "card";
-  tx_id?: string;
-  card?: {
-    card_number?: string;
-    expiry?: string;
-    cvv?: string;
-    name?: string;
-  };
-}
+import api from "@/lib/api";
 
 export interface CheckoutPayload {
- firstName: string;
+  firstName: string;
   lastName: string;
   email: string;
   phone: string;
@@ -38,7 +9,7 @@ export interface CheckoutPayload {
   city: string;
   postal_code: string;
   country: string;
-  payment_method: 'cod' | 'bkash' | 'nagad' | 'card';
+  payment_method: "cod" | "bkash" | "nagad" | "card";
   items: {
     id: number;
     name: string;
@@ -47,8 +18,26 @@ export interface CheckoutPayload {
   }[];
 }
 
-// ✅ same Axios-style pattern
 export const createOrder = async (payload: CheckoutPayload) => {
-  const res = await api.post("/api/checkout", payload);
-  return res.data.data;
+  try {
+    const res = await api.post("/api/checkout", payload);
+    return res.data;
+  } catch (err: unknown) {
+    const axiosErr = err as {
+      response?: { status?: number; data?: { error?: string; message?: string } };
+      message?: string;
+    };
+
+    if (axiosErr.response?.status === 401) {
+      throw new Error("Please login to complete your order.");
+    }
+
+    const message =
+      axiosErr.response?.data?.error ||
+      axiosErr.response?.data?.message ||
+      axiosErr.message ||
+      "Order failed. Please try again.";
+
+    throw new Error(message);
+  }
 };

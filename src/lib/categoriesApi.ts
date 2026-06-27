@@ -8,6 +8,11 @@ export interface Category {
   name: string;
   slug: string;
   status: CategoryStatus;
+  parent_id?: number | null;
+  description?: string | null;
+  image?: string | null;
+  image_url?: string | null;
+  products_count?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -74,20 +79,18 @@ export interface CreatePayload {
   status?: CategoryStatus;
 }
 
-export const createCategory = async (payload: CreatePayload): Promise<Category> => {
-  const res = await api.post("/api/categories", payload);
+export const createCategory = async (payload: FormData | CreatePayload): Promise<Category> => {
+  const config = payload instanceof FormData ? { headers: { "Content-Type": "multipart/form-data" } } : {};
+  const res = await api.post("/api/categories", payload, config);
   return res.data.data;
 };
 
-export const getCategory = async (id: number): Promise<Category> => {
-  const res = await api.get(`/api/categories/${id}`);
-  return res.data.data;
-};
-
-export const updateCategory = async (
-  id: number,
-  payload: CreatePayload
-): Promise<Category> => {
+export const updateCategory = async (id: number, payload: FormData | CreatePayload): Promise<Category> => {
+  if (payload instanceof FormData) {
+    payload.append("_method", "PUT");
+    const res = await api.post(`/api/categories/${id}`, payload, { headers: { "Content-Type": "multipart/form-data" } });
+    return res.data.data;
+  }
   const res = await api.put(`/api/categories/${id}`, payload);
   return res.data.data;
 };
@@ -104,5 +107,6 @@ export const toggleCategoryStatus = async (id: number): Promise<Category> => {
 
 export const getAllCategory = async (): Promise<Category[]> => {
   const res = await api.get("/api/all-category");
-  return res.data.data;
+  const data = res.data.data;
+  return Array.isArray(data) ? data : [];
 };

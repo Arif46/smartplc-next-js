@@ -7,7 +7,36 @@ export interface Product {
   id: number;
   name: string;
   slug: string;
+  sku?: string;
   status: ProductStatus;
+  category_id?: number;
+  brand_id?: number;
+  purchase_price?: number;
+  sale_price?: number | null;
+  cost_price?: number | null;
+  stock?: number;
+  description?: string;
+  specification?: string;
+  oem_number?: string;
+  part_number?: string;
+  barcode?: string;
+  weight?: number | null;
+  warranty?: string;
+  video_url?: string;
+  meta_title?: string;
+  meta_description?: string;
+  meta_keywords?: string;
+  is_featured?: boolean;
+  is_new_arrival?: boolean;
+  is_best_seller?: boolean;
+  is_flash_sale?: boolean;
+  is_trending?: boolean;
+  is_on_sale?: boolean;
+  image?: string | null;
+  image_url?: string | null;
+  category?: { id: number; name: string };
+  brand?: { id: number; name: string };
+  bike_models?: { id: number; name: string }[];
   created_at?: string;
   updated_at?: string;
 }
@@ -93,7 +122,7 @@ export const createProduct = async (payload: FormData): Promise<Product> => {
 
 
 export const getProduct = async (id: number): Promise<Product> => {
-  const res = await api.get(`/api/products/${id}`);
+  const res = await api.get(`/api/admin/products/${id}`);
   return res.data.data;
 };
 

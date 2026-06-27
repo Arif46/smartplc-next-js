@@ -1,29 +1,20 @@
 'use client';
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/store/authStore";
-import AdminDashboard from "./adminDashboard";
 
-const AdminPage = () => {
-  const router = useRouter();
-  const { isAuthenticated, user } = useAuthStore();
-  const [hydrated, setHydrated] = useState(false);
+import { Suspense } from 'react';
+import AdminDashboard from './adminDashboard';
 
-  useEffect(() => {
-    setHydrated(true); // wait for Zustand persist
-  }, []);
+function AdminLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center text-slate-400">
+      Loading admin...
+    </div>
+  );
+}
 
-  useEffect(() => {
-    if (!hydrated) return;
-    if (!isAuthenticated) {
-      router.push("/"); 
-    } else if (user?.role !== "admin") {
-      router.push("/"); // not admin
-    }
-  }, [hydrated, isAuthenticated, user, router]);
-
-  if (!hydrated || !isAuthenticated || user?.role !== "admin") return null;
-  return <AdminDashboard />;
-};
-
-export default AdminPage;
+export default function AdminPage() {
+  return (
+    <Suspense fallback={<AdminLoading />}>
+      <AdminDashboard />
+    </Suspense>
+  );
+}

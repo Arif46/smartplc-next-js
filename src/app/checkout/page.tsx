@@ -6,6 +6,8 @@ import { useCartStore } from '@/store/useCartStore';
 import { useAuthStore } from '@/store/authStore';
 import { createOrder } from "@/lib/checkoutApi";
 import toast from "react-hot-toast";
+import { useModalStore } from "@/store/modalStore";
+import { useMounted } from "@/hooks/useMounted";
 
 type ShippingState = {
   firstName: string;
@@ -31,7 +33,9 @@ type PaymentState = {
 const CheckoutPage: React.FC = () => {
   const router = useRouter();
   const { items, getSubtotal, clearCart } = useCartStore();
-  const { user } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
+  const { openAuthModal } = useModalStore();
+  const mounted = useMounted();
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -62,11 +66,25 @@ const CheckoutPage: React.FC = () => {
     if (user) {
       setShipping(prev => ({
         ...prev,
-        email: (user as any).email || '',
-        phone: (user as any).phone || ''
+        firstName: (user as any).first_name || prev.firstName,
+        lastName: (user as any).last_name || prev.lastName,
+        email: (user as any).email || prev.email,
+        phone: (user as any).phone || prev.phone,
       }));
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    if (!isAuthenticated) {
+      toast.error("Please login to checkout");
+      openAuthModal();
+      router.push("/");
+    } else if (items.length === 0) {
+      toast.error("Your cart is empty");
+      router.push("/shop");
+    }
+  }, [mounted, isAuthenticated, items.length, openAuthModal, router]);
 
   const onShippingChange = (key: keyof ShippingState, value: string) => {
     setShipping(prev => ({ ...prev, [key]: value }));
@@ -291,7 +309,7 @@ const CheckoutPage: React.FC = () => {
                   {loading ? 'Placing order...' : 'Place Order'}
                 </button>
               </div>
-              {/* {error && <div className="mt-3 text-red-600">{error}</div>} */}
+              {paymentError && <div className="mt-3 text-red-600 text-sm">{paymentError}</div>}
             </div>
           )}
         </div>

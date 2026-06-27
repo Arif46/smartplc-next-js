@@ -1,182 +1,116 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { getAllCategory } from "@/lib/categoriesApi";
+import { AdminCrudLabel } from "../shared/AdminCrudLayout";
 
-//export type CategoryStatus = "active" | "inactive";
-export type CategoryStatus = 1 | 2; // 1 = active, 2 = inactive
+export type CategoryStatus = 1 | 2;
 
 export interface Category {
   id: number;
   name: string;
   slug: string;
   status: CategoryStatus;
-}
-
-interface SavePayload {
-  name: string;
-  slug: string;
+  parent_id?: number | null;
+  description?: string | null;
+  image?: string | null;
+  image_url?: string | null;
 }
 
 interface CategoryFormProps {
   initial?: Partial<Category> | null;
-  onCancel: () => void;
-  onSave: (payload: SavePayload) => Promise<void> | void;
+  formId?: string;
+  onSave: (payload: FormData) => Promise<void> | void;
 }
 
 const slugify = (value: string) =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\-]+/g, "-")
-    .replace(/\-+/g, "-")
-    .replace(/^\-|\-$/g, "");
+  value.trim().toLowerCase().replace(/[^a-z0-9\-]+/g, "-").replace(/\-+/g, "-").replace(/^\-|\-$/g, "");
 
-const CategoryForm: React.FC<CategoryFormProps> = ({ initial = null, onCancel, onSave }) => {
+export default function CategoryForm({ initial = null, formId = "category-form", onSave }: CategoryFormProps) {
   const [name, setName] = useState(initial?.name ?? "");
   const [slug, setSlug] = useState(initial?.slug ?? "");
-  // const [status, setStatus] = useState<CategoryStatus>((initial?.status as CategoryStatus) ?? "active");
-  const [customSlugEdited, setCustomSlugEdited] = useState<boolean>(!!initial?.slug);
-  const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<{name?: string, slug?: string}>({});
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [parentId, setParentId] = useState(String(initial?.parent_id ?? ""));
+  const [image, setImage] = useState<File | null>(null);
+  const [parents, setParents] = useState<Category[]>([]);
+  const [customSlugEdited, setCustomSlugEdited] = useState(!!initial?.slug);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!customSlugEdited) {
-      setSlug(slugify(name || ""));
-    }
-  }, [name, customSlugEdited]);
+    getAllCategory().then(setParents).catch(() => {});
+  }, []);
 
-  const validateForm = () => {
-    const newErrors: {name?: string, slug?: string} = {};
-    
-    if (!name.trim()) {
-      newErrors.name = "Name is required";
-    }
-    
-    if (!slug.trim()) {
-      newErrors.slug = "Slug is required";
-    } else if (!/^[a-z0-9\-]+$/.test(slug)) {
-      newErrors.slug = "Slug can only contain lowercase letters, numbers, and hyphens";
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  useEffect(() => {
+    setName(initial?.name ?? "");
+    setSlug(initial?.slug ?? "");
+    setDescription(initial?.description ?? "");
+    setParentId(String(initial?.parent_id ?? ""));
+    setImage(null);
+    setCustomSlugEdited(!!initial?.slug);
+  }, [initial?.id]);
+
+  useEffect(() => {
+    if (!customSlugEdited) setSlug(slugify(name || ""));
+  }, [name, customSlugEdited]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
+    if (!name.trim()) return setErrors({ name: "Name is required" });
 
-    const payload: SavePayload = {
-      name: name.trim(),
-      slug: slug.trim() || slugify(name)
-    };
+    const fd = new FormData();
+    fd.append("name", name.trim());
+    fd.append("slug", slug.trim() || slugify(name));
+    if (description) fd.append("description", description);
+    if (parentId) fd.append("parent_id", parentId);
+    if (image) fd.append("image", image);
+
     try {
-      setSaving(true);
-      await onSave(payload);
-      
-    } catch (err) {
-      const message = (err as any)?.response?.data?.message ?? (err as Error).message ?? "Save failed";
-      toast.error(message);
-    } finally {
-      setSaving(false);
+      await onSave(fd);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Save failed");
     }
   };
+
   return (
-    <div className="relative bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
-      {/* Loader Overlay */}
-      {saving && (
-        <div className="absolute inset-0 bg-gray-200/50 flex items-center justify-center z-10 rounded-lg">
-          <svg
-            className="animate-spin h-8 w-8 text-blue-600"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            ></circle>
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 
-                0 5.373 0 12h4zm2 5.291A7.962 7.962 
-                0 014 12H0c0 3.042 1.135 5.824 3 
-                7.938l3-2.647z"
-            ></path>
-          </svg>
-        </div>
-      )}
-
-  
-      <form onSubmit={handleSubmit} className="space-y-5 relative z-0">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              if (errors.name) setErrors({ ...errors, name: undefined });
-            }}
-            disabled={saving}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.name ? "border-red-500" : "border-gray-300"
-            }`}
-            placeholder="Enter category name"
+    <form id={formId} onSubmit={handleSubmit} className="space-y-3">
+      <div>
+        <AdminCrudLabel required>Category Name</AdminCrudLabel>
+        <input className="crud-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter category name" />
+        {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+      </div>
+      <div>
+        <AdminCrudLabel required>Slug</AdminCrudLabel>
+        <input className="crud-input" value={slug} onChange={(e) => { setSlug(e.target.value); setCustomSlugEdited(true); }} />
+      </div>
+      <div>
+        <AdminCrudLabel>Parent Category</AdminCrudLabel>
+        <select className="crud-input" value={parentId} onChange={(e) => setParentId(e.target.value)}>
+          <option value="">None (Top Level)</option>
+          {parents.filter((p) => p.id !== initial?.id).map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <AdminCrudLabel>Description</AdminCrudLabel>
+        <textarea className="crud-input" rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short description" />
+      </div>
+      <div>
+        <AdminCrudLabel>Category Image</AdminCrudLabel>
+        <input type="file" accept="image/*" className="crud-input py-2" onChange={(e) => setImage(e.target.files?.[0] ?? null)} />
+        {(initial?.image_url || image) && (
+          <img
+            src={image ? URL.createObjectURL(image) : initial?.image_url!}
+            alt=""
+            className="mt-2 h-16 rounded-md border object-cover"
           />
-          {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
-        </div>
-  
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Slug <span className="text-red-500">*</span>
-          </label>
-          <input
-            value={slug}
-            onChange={(e) => {
-              setSlug(e.target.value);
-              setCustomSlugEdited(true);
-              if (errors.slug) setErrors({ ...errors, slug: undefined });
-            }}
-            disabled={saving}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.slug ? "border-red-500" : "border-gray-300"
-            }`}
-            placeholder="category-slug"
-          />
-          {errors.slug && <p className="mt-1 text-sm text-red-600">{errors.slug}</p>}
-        </div>
-  
-        <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={saving}
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70"
-          >
-            Save Category
-          </button>
-        </div>
-      </form>
-    </div>
+        )}
+      </div>
+    </form>
   );
-  
-};
+}
 
-export default CategoryForm;
+export function emptyCategoryForm() {
+  return { id: undefined, name: "", slug: "", description: "", parent_id: null, image_url: null };
+}

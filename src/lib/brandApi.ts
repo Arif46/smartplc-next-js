@@ -8,6 +8,10 @@ export interface Brand {
   name: string;
   slug: string;
   status: BrandStatus;
+  description?: string | null;
+  is_featured?: boolean;
+  logo?: string | null;
+  logo_url?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -74,8 +78,9 @@ export interface CreatePayload {
   status?: BrandStatus;
 }
 
-export const createBrand = async (payload: CreatePayload): Promise<Brand> => {
-  const res = await api.post("/api/brands-create", payload);
+export const createBrand = async (payload: FormData | CreatePayload): Promise<Brand> => {
+  const config = payload instanceof FormData ? { headers: { "Content-Type": "multipart/form-data" } } : {};
+  const res = await api.post("/api/brands-create", payload, config);
   return res.data.data;
 };
 
@@ -84,10 +89,12 @@ export const getBrand = async (id: number): Promise<Brand> => {
   return res.data.data;
 };
 
-export const updateBrand = async (
-  id: number,
-  payload: CreatePayload
-): Promise<Brand> => {
+export const updateBrand = async (id: number, payload: FormData | CreatePayload): Promise<Brand> => {
+  if (payload instanceof FormData) {
+    payload.append("_method", "PUT");
+    const res = await api.post(`/api/brands-update/${id}`, payload, { headers: { "Content-Type": "multipart/form-data" } });
+    return res.data.data;
+  }
   const res = await api.put(`/api/brands-update/${id}`, payload);
   return res.data.data;
 };
@@ -102,7 +109,8 @@ export const toggleBrandStatus = async (id: number): Promise<Brand> => {
   return res.data.data; 
 };
 
-export const getAllBrand = async (): Promise<Brand> => {
+export const getAllBrand = async (): Promise<Brand[]> => {
   const res = await api.get(`/api/all-brand`);
-  return res.data.data;
+  const data = res.data.data;
+  return Array.isArray(data) ? data : [];
 };

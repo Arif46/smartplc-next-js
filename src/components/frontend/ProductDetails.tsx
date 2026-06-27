@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Star, Heart, ShoppingCart, Minus, Plus, Truck, Shield, RotateCcw } from 'lucide-react';
 import Image from 'next/image';
 import { useCartStore } from '@/store/useCartStore';
+import { useWishlistStore } from '@/store/wishlistStore';
+import { getProductImageUrl, resolveProductImage, formatPrice, getEffectivePrice } from '@/lib/productUtils';
+import toast from 'react-hot-toast';
 
 interface Product {
   id: number;
@@ -9,7 +12,8 @@ interface Product {
   name: string;
   purchase_price: number;
   originalPrice?: number;
-  image: string;
+  image?: string | null;
+  image_url?: string | null;
   category?: { id: number; name: string };
   brand?: { id: number; name: string };
   stock: number;
@@ -19,38 +23,41 @@ interface Product {
 
 interface ProductDetailsProps {
   product: Product;
-  // onAddToCart: (product: Product, quantity: number, purchase_price?: string, color?: string) => void;
-  onAddToWishlist: (product: Product) => void;
 }
 
-const ProductDetails: React.FC<ProductDetailsProps> = ({ product, onAddToWishlist }) => {
+const ProductDetails: React.FC<ProductDetailsProps> = ({ product }) => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const [isWishlisted, setIsWishlisted] = useState(false);
-   const addItem = useCartStore(state => state.addToCart);
+  const addItem = useCartStore(state => state.addToCart);
+  const { toggle: toggleWishlist, has: isInWishlist } = useWishlistStore();
 
   // const handleAddToCart = () => {
   //   onAddToCart(product, quantity, selectedSize, selectedColor);
   // };
 
- const handleAddToCart = (e: React.MouseEvent) => {
-  e.stopPropagation();
+ const handleAddToCart = () => {
   addItem({
     id: product.id,
-    ///slug: product.slug,
     name: product.name,
-    price: product.purchase_price,
-    image: product.image,
+    price: getEffectivePrice(product),
+    image: product.image ?? '',
     stock: product.stock ? product.stock : 0,
-    quantity: 1,
+    quantity,
   });
+  toast.success('Added to cart');
 };
 
   const handleWishlistClick = () => {
-    setIsWishlisted(!isWishlisted);
-    onAddToWishlist(product);
+    toggleWishlist({
+      id: product.id,
+      slug: product.slug,
+      name: product.name,
+      purchase_price: product.purchase_price,
+      image: product.image ?? '',
+      stock: product.stock,
+    });
   };
 
   // const discount = product.originalPrice ? 
@@ -64,27 +71,18 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, onAddToWishlis
           {/* Main Product Image */}
           <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
             <img
-              src={
-                product.image.startsWith("http")
-                  ? product.image
-                  : `${process.env.NEXT_PUBLIC_API_BASE_URL}/storage/products/${product.image}`
-              }
+              src={resolveProductImage(product)}
               alt={product.name}
               className="w-full h-full object-cover rounded-lg"
             />
           </div>
 
-          {/* Optional Thumbnail / Small Image Preview */}
           <div className="flex space-x-2 overflow-x-auto">
             <button
               className="flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 border-gray-200"
             >
               <img
-                src={
-                  product.image.startsWith("http")
-                    ? product.image
-                    : `${process.env.NEXT_PUBLIC_API_BASE_URL}/storage/products/${product.image}`
-                }
+                src={resolveProductImage(product)}
                 alt={product.name}
                 className="w-full h-full object-cover"
               />
@@ -205,12 +203,12 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, onAddToWishlis
             <button
               onClick={handleWishlistClick}
               className={`p-3 rounded-md border transition-colors ${
-                isWishlisted
+                isInWishlist(product.id)
                   ? 'bg-red-50 border-red-300 text-red-600'
                   : 'border-gray-300 hover:border-gray-400'
               }`}
             >
-              <Heart className={`h-5 w-5 ${isWishlisted ? 'fill-current' : ''}`} />
+              <Heart className={`h-5 w-5 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
             </button>
           </div>
 
