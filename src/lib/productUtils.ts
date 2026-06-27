@@ -39,3 +39,56 @@ export function getDiscountPercent(product: {
   }
   return 0;
 }
+
+export function resolveProductGallery(product: {
+  image?: string | null;
+  image_url?: string | null;
+  gallery?: string[] | null;
+  gallery_urls?: string[] | null;
+}): string[] {
+  const main = resolveProductImage(product);
+  const fromApi = product.gallery_urls?.filter(Boolean) ?? [];
+  const fromGallery =
+    product.gallery?.map((img) => getProductImageUrl(img)).filter(Boolean) ?? [];
+
+  const all = [main, ...fromApi, ...fromGallery].filter(Boolean);
+  return [...new Set(all)];
+}
+
+export type VideoEmbed = {
+  type: "youtube" | "vimeo" | "direct" | "unknown";
+  embedUrl: string;
+  thumbnailUrl?: string;
+};
+
+export function parseVideoEmbed(videoUrl?: string | null): VideoEmbed | null {
+  if (!videoUrl?.trim()) return null;
+
+  const url = videoUrl.trim();
+
+  const youtubeMatch = url.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/
+  );
+  if (youtubeMatch) {
+    const id = youtubeMatch[1];
+    return {
+      type: "youtube",
+      embedUrl: `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1`,
+      thumbnailUrl: `https://img.youtube.com/vi/${id}/hqdefault.jpg`,
+    };
+  }
+
+  const vimeoMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vimeoMatch) {
+    return {
+      type: "vimeo",
+      embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}`,
+    };
+  }
+
+  if (/\.(mp4|webm|ogg)(\?|$)/i.test(url) || url.startsWith("blob:")) {
+    return { type: "direct", embedUrl: url };
+  }
+
+  return { type: "unknown", embedUrl: url };
+}

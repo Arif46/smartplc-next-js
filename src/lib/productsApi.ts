@@ -23,6 +23,21 @@ export interface Product {
   weight?: number | null;
   warranty?: string;
   video_url?: string;
+  gallery?: string[] | null;
+  gallery_urls?: string[] | null;
+  installation_guide?: string;
+  rating?: number;
+  review_count?: number;
+  discount_percent?: number;
+  weight?: number | null;
+  dimensions?: string | null;
+  reviews?: Array<{
+    id: number;
+    rating: number;
+    title?: string;
+    comment?: string;
+    created_at?: string;
+  }>;
   meta_title?: string;
   meta_description?: string;
   meta_keywords?: string;
