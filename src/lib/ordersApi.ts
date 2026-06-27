@@ -43,10 +43,9 @@ export const getAdminOrderById = async (id: number) => {
 export const downloadInvoice = async (orderId: number, orderNumber: string) => {
   try {
     const response = await api.get(`/api/orders/${orderId}/invoice`, {
-      responseType: "blob", // important
+      responseType: "blob",
     });
 
-    // create URL
     const url = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement("a");
     link.href = url;
@@ -55,6 +54,7 @@ export const downloadInvoice = async (orderId: number, orderNumber: string) => {
     window.URL.revokeObjectURL(url);
   } catch (error) {
     console.error("Invoice download error:", error);
+    throw error;
   }
 };
 
@@ -84,3 +84,5 @@ export const updateOrderStatus = async (orderId: number, status: string) => {
 
   return res.data;
 };
+
+export { cancelCustomerOrder } from "@/lib/customerPanelApi";

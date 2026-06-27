@@ -133,6 +133,7 @@ export default function Header() {
               <button
                 onClick={() => setIsCartOpen(true)}
                 className="relative p-2 rounded-lg hover:bg-muted transition-colors"
+                aria-label="Open cart"
               >
                 <ShoppingCart className="h-5 w-5" />
                 {mounted && cartCount > 0 && (
@@ -167,7 +168,7 @@ export default function Header() {
                         <Link href="/customer?tab=orders" onClick={() => setIsUserMenuOpen(false)} className="block px-4 py-2.5 text-sm hover:bg-muted">
                           Orders
                         </Link>
-                        <Link href="/wishlist" onClick={() => setIsUserMenuOpen(false)} className="block px-4 py-2.5 text-sm hover:bg-muted">
+                        <Link href="/customer?tab=wishlist" onClick={() => setIsUserMenuOpen(false)} className="block px-4 py-2.5 text-sm hover:bg-muted">
                           Wishlist
                         </Link>
                         {user?.role === "admin" && (

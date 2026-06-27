@@ -4,7 +4,7 @@ import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/authStore";
-import { Loader2 } from "lucide-react";
+import { consumePostLoginRedirect } from "@/lib/checkoutConstants";
 
 function AuthCallbackContent() {
   const router = useRouter();
@@ -32,7 +32,12 @@ function AuthCallbackContent() {
 
     login(token, { role, email, first_name: name, name });
     toast.success("Signed in successfully!");
-    router.replace(role === "admin" ? "/admin" : "/customer");
+    const storedRedirect = consumePostLoginRedirect();
+    if (storedRedirect && role === "customer") {
+      router.replace(storedRedirect);
+    } else {
+      router.replace(role === "admin" ? "/admin" : "/customer");
+    }
   }, [searchParams, login, router]);
 
   return (

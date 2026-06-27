@@ -7,6 +7,7 @@ import toast from "react-hot-toast";
 import AuthPageShell from "@/components/frontend/auth/AuthPageShell";
 import SocialAuthButtons from "@/components/frontend/auth/SocialAuthButtons";
 import { loginWithEmail } from "@/lib/authApi";
+import { consumePostLoginRedirect } from "@/lib/checkoutConstants";
 import { useAuthStore } from "@/store/authStore";
 
 type LoginMode = "customer" | "admin" | "auto";
@@ -58,8 +59,11 @@ export default function LoginForm({
       onSuccess?.();
       onClose?.();
 
+      const storedRedirect = consumePostLoginRedirect();
       if (redirectTo) {
         router.push(redirectTo);
+      } else if (storedRedirect && role === "customer") {
+        router.push(storedRedirect);
       } else if (role === "admin") {
         router.push("/admin");
       } else if (role === "customer") {

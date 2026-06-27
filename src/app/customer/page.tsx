@@ -1,10 +1,12 @@
 'use client';
-import { useEffect, useState } from "react";
+
+import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
 import CustomerDashboard from "./customerDashboad";
 
-const CustomerPage = () => {
+function CustomerDashboardContent() {
   const router = useRouter();
   const { isAuthenticated, user } = useAuthStore();
   const [hydrated, setHydrated] = useState(false);
@@ -18,12 +20,33 @@ const CustomerPage = () => {
     if (!isAuthenticated) {
       router.push("/");
     } else if (user?.role !== "customer") {
-      router.push("/"); // not customer
+      router.push("/");
     }
   }, [hydrated, isAuthenticated, user, router]);
 
-  if (!hydrated || !isAuthenticated || user?.role !== "customer") return null;
+  if (!hydrated || !isAuthenticated || user?.role !== "customer") {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return <CustomerDashboard />;
+}
+
+const CustomerPage = () => {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[50vh] flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <CustomerDashboardContent />
+    </Suspense>
+  );
 };
 
 export default CustomerPage;

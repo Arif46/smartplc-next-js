@@ -1,32 +1,34 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Eye } from "lucide-react";
+import Link from "next/link";
+import { Eye, Package, Loader2 } from "lucide-react";
 import { getCustomerOrders } from "@/lib/ordersApi";
-
-type ApiOrderItem = {
-  id: number;
-  name: string;
-};
+import { formatPrice } from "@/lib/productUtils";
+import {
+  formatOrderStatus,
+  orderStatusStyle,
+  paymentStatusStyle,
+} from "@/lib/customerConstants";
 
 type ApiOrder = {
   id: number;
   order_number: string;
   created_at: string;
   status: string;
-  payment_status: string;
   total_amount: number | string;
-  items: ApiOrderItem[];
+  items: Array<{ product_name?: string; name?: string }>;
+  payment?: { status?: string };
 };
 
 export type OrderRow = {
   id: number;
   orderNumber: string;
   date: string;
-  items: { name: string }[];
-  status: "delivered" | "processing" | "shipped" | "cancelled" | string;
-  paymentStatus: "Paid" | "Pending" | "Failed" | string;
+  status: string;
+  paymentStatus: string;
   total_amount: number;
+  itemCount: number;
 };
 
 type OrderHistoryProps = {
@@ -37,10 +39,10 @@ const mapApiOrderToRow = (order: ApiOrder): OrderRow => ({
   id: order.id,
   orderNumber: order.order_number,
   date: order.created_at,
-  items: (order.items || []).map((i) => ({ name: i.name })),
   status: order.status,
-  paymentStatus: order.payment_status as OrderRow["paymentStatus"],
+  paymentStatus: order.payment?.status || "pending",
   total_amount: Number(order.total_amount || 0),
+  itemCount: order.items?.length || 0,
 });
 
 const OrderHistory: React.FC<OrderHistoryProps> = ({ onViewDetails }) => {
@@ -49,103 +51,129 @@ const OrderHistory: React.FC<OrderHistoryProps> = ({ onViewDetails }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const apiData = await getCustomerOrders();
-        const mapped = (apiData as ApiOrder[]).map(mapApiOrderToRow);
-        setOrders(mapped);
-      } catch (err: any) {
-        console.error("Failed to fetch orders:", err);
-        setError(err?.message || "Failed to load orders.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOrders();
+    getCustomerOrders()
+      .then((apiData) => setOrders((apiData as ApiOrder[]).map(mapApiOrderToRow)))
+      .catch((err: any) => setError(err?.message || "Failed to load orders."))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
     return (
-      <p className="text-center text-gray-500 py-6">Loading orders...</p>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-white rounded-lg shadow-md p-6 text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">
-          Order History
-        </h2>
-        <p className="text-red-500 text-sm mb-2">{error}</p>
-        <p className="text-gray-500 text-sm">
-          Please refresh the page and try again.
-        </p>
+      <div className="bg-card border border-border rounded-2xl p-12 flex justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  if (!orders.length) {
-    return (
-      <div className="bg-white rounded-lg shadow-md p-6 text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">
-          Order History
-        </h2>
-        <p className="text-gray-500 text-lg">
-          You have no order history yet.
-        </p>
+  return (
+    <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+      <div className="px-6 py-5 border-b border-border">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-primary/10">
+            <Package className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Order History</h2>
+            <p className="text-sm text-muted-foreground">Track and manage your purchases</p>
+          </div>
+        </div>
       </div>
-    );
-  }
-	return (
-		<div className="bg-white rounded-lg shadow-md p-6">
-			<h2 className="text-2xl font-bold text-gray-900 mb-4">Order History</h2>
-			<div className="overflow-x-auto">
-				<table className="min-w-full divide-y divide-gray-200">
-					<thead className="bg-gray-50">
-						<tr>
-							<th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order Number</th>
-							<th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-							{/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Products</th> */}
-							<th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-							{/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th> */}
-							<th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-							<th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-						</tr>
-					</thead>
-					<tbody className="bg-white divide-y divide-gray-200">
-						{orders?.map((order) => (
-							<tr key={order.id}>
-								<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.orderNumber}</td>
-								<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(order.date).toLocaleDateString()}</td>
-								{/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.items.map((item) => item.name).join(", ")}</td> */}
-								<td className="px-6 py-4 whitespace-nowrap">
-									<span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${order.status === 'delivered' ? 'bg-green-100 text-green-800' : order.status === 'processing' ? 'bg-yellow-100 text-yellow-800' : order.status === 'shipped' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
-										{order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-									</span>
-								</td>
-								{/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-									<span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${order.paymentStatus === 'Paid' ? 'bg-green-100 text-green-800' : order.paymentStatus === 'Pending' ? 'bg-yellow-100 text-yellow-800' : order.paymentStatus === 'Failed' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
-										{order.paymentStatus}
-									</span>
-								</td> */}
-								<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">৳ {order.total_amount.toFixed(2)}</td>
-								<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-									<button onClick={() => onViewDetails(order.id)} className="text-blue-600 hover:text-blue-900 transition-colors">
-										<Eye className="h-5 w-5" />
-									</button>
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
-		</div>
-	);
+
+      {error ? (
+        <div className="p-8 text-center">
+          <p className="text-danger text-sm mb-2">{error}</p>
+          <p className="text-muted-foreground text-sm">Please refresh and try again.</p>
+        </div>
+      ) : !orders.length ? (
+        <div className="p-10 text-center">
+          <Package className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+          <p className="text-muted-foreground mb-4">You have no orders yet.</p>
+          <Link
+            href="/shop"
+            className="inline-flex px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium"
+          >
+            Start Shopping
+          </Link>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Order
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Items
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Payment
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Total
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {orders.map((order) => (
+                <tr key={order.id} className="hover:bg-muted/20 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
+                    {order.orderNumber}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    {new Date(order.date).toLocaleDateString("en-BD", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                    {order.itemCount}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border ${orderStatusStyle(order.status)}`}
+                    >
+                      {formatOrderStatus(order.status)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border ${paymentStatusStyle(order.paymentStatus)}`}
+                    >
+                      {formatOrderStatus(order.paymentStatus)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-foreground">
+                    {formatPrice(order.total_amount)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <button
+                      type="button"
+                      onClick={() => onViewDetails(order.id)}
+                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                    >
+                      <Eye className="h-4 w-4" />
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default OrderHistory;
-
- 
